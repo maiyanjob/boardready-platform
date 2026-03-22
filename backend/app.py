@@ -14,7 +14,15 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
-CORS(app)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
+
+# CORS - allow credentials
+CORS(app, 
+     supports_credentials=True,
+     origins=['http://localhost:5173'],
+     allow_headers=['Content-Type'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -47,6 +55,7 @@ def register():
     )
     db.add(user)
     db.commit()
+    db.close()
     
     return jsonify({'message': 'User created successfully'}), 201
 
@@ -58,9 +67,11 @@ def login():
     user = db.query(User).filter_by(email=data['email']).first()
     
     if not user or not check_password_hash(user.password_hash, data['password']):
+        db.close()
         return jsonify({'error': 'Invalid email or password'}), 401
     
-    login_user(user)
+    login_user(user, remember=True)
+    db.close()
     
     return jsonify({
         'message': 'Logged in successfully',
@@ -97,5 +108,6 @@ if __name__ == '__main__':
     print("✅ Auth system configured!")
     print("✅ Candidate routes loaded!")
     print("✅ Board routes loaded!")
+    print("✅ CORS configured for localhost:5173")
     print("📍 API running on http://localhost:5000")
     app.run(debug=True, port=5000)
