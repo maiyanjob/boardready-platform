@@ -8,6 +8,7 @@ import os
 from models import get_db, User, Candidate, Board, Document
 from models.base import SessionLocal
 from routes.candidate_routes import candidate_bp
+from routes.board_routes import board_bp
 
 load_dotenv()
 
@@ -26,6 +27,7 @@ def load_user(user_id):
 
 # Register blueprints
 app.register_blueprint(candidate_bp, url_prefix='/api')
+app.register_blueprint(board_bp, url_prefix='/api')
 
 # Auth Routes
 @app.route('/api/register', methods=['POST'])
@@ -94,5 +96,6 @@ if __name__ == '__main__':
     print("✅ Flask app ready!")
     print("✅ Auth system configured!")
     print("✅ Candidate routes loaded!")
+    print("✅ Board routes loaded!")
     print("📍 API running on http://localhost:5000")
     app.run(debug=True, port=5000)
