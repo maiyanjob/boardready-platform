@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Candidates from './pages/Candidates';
 import Boards from './pages/Boards';
 import Match from './pages/Match';
+import AISearch from './pages/AISearch';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/candidates" element={<Candidates />} />
         <Route path="/boards" element={<Boards />} />
         <Route path="/match" element={<Match />} />
+        <Route path="/search" element={<AISearch />} />
       </Routes>
     </Router>
   );
