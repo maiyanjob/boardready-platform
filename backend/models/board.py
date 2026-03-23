@@ -13,8 +13,8 @@ class Board(Base):
     sector = Column(String(100))
     last_proxy_date = Column(Date)
     
-    # Semantic search
-    description_embedding = Column(Vector(1536))
+    # Voyage embeddings (1024 dimensions)
+    description_embedding = Column(Vector(1024))
     
     created_at = Column(DateTime, default=datetime.utcnow)
     

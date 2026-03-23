@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, LargeBinary
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from .base import Base
@@ -8,14 +8,13 @@ class Document(Base):
     
     id = Column(Integer, primary_key=True)
     filename = Column(String(500), nullable=False)
-    file_type = Column(String(50))  # 'pdf', 'docx', etc.
-    content = Column(Text)  # Extracted text
+    file_type = Column(String(50))
+    content = Column(Text)
     
-    # For semantic search
-    content_embedding = Column(Vector(1536))
+    # Voyage embeddings (1024 dimensions)
+    content_embedding = Column(Vector(1024))
     
-    # Metadata
-    uploaded_by = Column(Integer)  # user_id
+    uploaded_by = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):

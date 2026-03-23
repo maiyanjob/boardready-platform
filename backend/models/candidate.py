@@ -13,8 +13,8 @@ class Candidate(Base):
     bio = Column(Text)
     linkedin_url = Column(String(500))
     
-    # Semantic search with pgvector!
-    bio_embedding = Column(Vector(1536))
+    # Voyage embeddings (1024 dimensions)
+    bio_embedding = Column(Vector(1024))
     
     # Structured data
     years_experience = Column(Integer)
