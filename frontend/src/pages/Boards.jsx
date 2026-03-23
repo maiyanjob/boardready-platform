@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getBoards } from '../lib/api';
 import Sidebar from '../components/layout/Sidebar';
-import { Button } from '../components/ui/button';
+import { Plus, Building2, Calendar } from 'lucide-react';
 
 export default function Boards() {
   const [boards, setBoards] = useState([]);
@@ -23,78 +23,66 @@ export default function Boards() {
 
   if (loading) {
     return (
-      <div className="flex">
+      <div className="flex min-h-screen bg-slate-950">
         <Sidebar />
         <div className="flex-1 p-8">
-          <p>Loading boards...</p>
+          <div className="animate-pulse space-y-6">
+            <div className="h-10 bg-slate-800 rounded w-1/3"></div>
+            <div className="h-48 bg-slate-800/50 rounded-2xl"></div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-slate-950">
       <Sidebar />
       <div className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Boards</h1>
-          <Button>+ Add Board</Button>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-5xl font-black mb-2">
+              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                Board Opportunities
+              </span>
+            </h1>
+            <p className="text-slate-400 text-lg">{boards.length} active board{boards.length !== 1 ? 's' : ''}</p>
+          </div>
+          <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+            <Plus className="h-5 w-5" />
+            Add Board
+          </button>
         </div>
 
-        <div className="grid gap-4">
+        <div className="space-y-6">
           {boards.map((board) => (
-            <div
-              key={board.id}
-              className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {board.company_name}
-                    </h3>
-                    {board.ticker && (
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-mono">
-                        {board.ticker}
-                      </span>
-                    )}
+            <div key={board.id} className="relative group">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-600 opacity-60 group-hover:opacity-100 transition-all blur-[2px]" />
+              <div className="relative bg-slate-900 border border-white/10 rounded-2xl p-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-white">{board.company_name}</h3>
+                      {board.ticker && (
+                        <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-300 text-sm font-mono font-bold">
+                          {board.ticker}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-400 mb-3">
+                      <Building2 className="h-4 w-4" />
+                      <span>{board.sector}</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">{board.description}</p>
                   </div>
-                  
-                  {board.sector && (
-                    <p className="text-gray-600 mt-1">
-                      {board.sector}
-                    </p>
-                  )}
-
-                  <p className="text-gray-700 mt-3">
-                    {board.description}
-                  </p>
-
-                  {board.last_proxy_date && (
-                    <p className="text-sm text-gray-500 mt-3">
-                      Last Proxy: {new Date(board.last_proxy_date).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <button className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-600 text-white text-sm font-semibold rounded-xl shadow-lg hover:scale-105 transition-all">
                     Match Candidates
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {boards.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No boards yet. Add your first board to get started!
-          </div>
-        )}
       </div>
     </div>
   );
