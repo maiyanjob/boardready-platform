@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { searchCandidates, searchBoards } from '../lib/api';
 import Sidebar from '../components/layout/Sidebar';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
+import { Spinner } from '../components/ui/spinner';
+import { Search, Briefcase, Building2 } from 'lucide-react';
 
 const getInitials = (name) =>
   name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -48,105 +46,101 @@ export default function AISearch() {
     }
   };
 
-  const handleKey = (e) => { if (e.key === 'Enter') handleSearch(); };
+  const handleKey = (e) => {
+    if (e.key === 'Enter') handleSearch();
+  };
 
   const totalResults = candidateResults.length + boardResults.length;
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-950">
       <Sidebar />
       <div className="flex-1 p-8 max-w-[1000px]">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mb-8"
+          transition={{ duration: 0.5 }}
+          className="mb-10"
         >
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">AI Semantic Search</h1>
-          </div>
-          <p className="text-slate-500 text-sm ml-12">Search with natural language — the AI understands context, not just keywords</p>
+          <h1 className="text-5xl font-black mb-2">
+            <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+              AI Semantic Search
+            </span>
+          </h1>
+          <p className="text-slate-400 text-lg">
+            Natural language queries — the AI understands context, not just keywords
+          </p>
         </motion.div>
 
         {/* Search Box */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="mb-6"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-8"
         >
-          <Card className="shadow-sm border-slate-200">
-            <CardContent className="p-5">
-              {/* Search input */}
-              <div className="flex gap-3">
+          <div className="relative group">
+            {/* Glow */}
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 opacity-0 group-focus-within:opacity-100 transition-all duration-500 blur-sm" />
+
+            <div className="relative bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+              {/* Input row */}
+              <div className="flex gap-3 mb-5">
                 <div className="relative flex-1">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                  </div>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKey}
                     placeholder='Try: "Find CFO with fintech experience"'
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 text-slate-900 placeholder:text-slate-400 transition-all"
+                    className="w-full h-14 pl-12 pr-4 text-base bg-slate-800/60 border-2 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200"
                   />
                 </div>
-                <Button
+                <button
                   onClick={handleSearch}
                   disabled={loading || !query.trim()}
-                  className="h-11 px-6 text-sm font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-sm shadow-blue-500/20 transition-all disabled:opacity-50"
+                  className="h-14 px-8 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
                       Searching
                     </span>
-                  ) : 'Search'}
-                </Button>
+                  ) : (
+                    'Search'
+                  )}
+                </button>
               </div>
 
               {/* Filter tabs */}
-              <div className="flex gap-1 mt-4 p-1 bg-slate-100 rounded-lg w-fit">
+              <div className="flex gap-1 p-1 bg-slate-800/60 rounded-xl w-fit">
                 {filterTabs.map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setSearchType(tab.key)}
-                    className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                       searchType === tab.key
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-white border border-white/10'
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
 
         {/* Loading */}
         {loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="py-12 text-center"
-          >
-            <div className="inline-flex items-center gap-3 px-5 py-3 bg-blue-50 rounded-xl border border-blue-100">
-              <svg className="animate-spin h-4 w-4 text-blue-500" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              <span className="text-sm font-medium text-blue-700">Analyzing with AI...</span>
-            </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Spinner label="Analyzing with AI..." />
           </motion.div>
         )}
 
@@ -156,73 +150,73 @@ export default function AISearch() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
+              transition={{ duration: 0.4 }}
+              className="space-y-8"
             >
               {totalResults === 0 ? (
-                <Card className="py-14 text-center border-dashed border-slate-200">
-                  <CardContent>
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    </div>
-                    <p className="text-sm font-medium text-slate-700">No results for "{query}"</p>
-                    <p className="text-xs text-slate-400 mt-1">Try different terms or add more data</p>
-                  </CardContent>
-                </Card>
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-7 w-7 text-slate-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-white mb-1">No results for "{query}"</p>
+                  <p className="text-slate-400">Try different terms or add more data</p>
+                </div>
               ) : (
                 <>
-                  <p className="text-xs text-slate-400 font-medium">{totalResults} result{totalResults !== 1 ? 's' : ''} found</p>
+                  <p className="text-sm text-slate-400 font-medium">
+                    {totalResults} result{totalResults !== 1 ? 's' : ''} found
+                  </p>
 
                   {/* Candidate Results */}
                   {candidateResults.length > 0 && (searchType === 'all' || searchType === 'candidates') && (
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <h2 className="text-sm font-semibold text-slate-700">Candidates</h2>
-                        <Badge className="text-xs bg-blue-50 text-blue-600 border-blue-200">{candidateResults.length}</Badge>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Briefcase className="h-4 w-4 text-cyan-400" />
+                        <h2 className="text-base font-bold text-white">Candidates</h2>
+                        <span className="px-2.5 py-0.5 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-300 text-xs font-bold">
+                          {candidateResults.length}
+                        </span>
                       </div>
                       <div className="space-y-3">
                         {candidateResults.map((candidate, index) => (
                           <motion.div
                             key={candidate.id}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.06 }}
+                            transition={{ delay: index * 0.07 }}
+                            className="group relative"
                           >
-                            <Card className="hover:border-blue-200 hover:shadow-sm transition-all duration-200 group border-slate-200">
-                              <CardContent className="p-4">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-start gap-3 flex-1">
-                                    <div className="relative flex-shrink-0">
-                                      <Avatar className="h-9 w-9 ring-2 ring-white shadow-sm">
-                                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-bold">
-                                          {getInitials(candidate.name)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center">
-                                        <span className="text-white text-[7px] font-bold">#{index + 1}</span>
-                                      </div>
+                            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 opacity-0 group-hover:opacity-60 blur-sm transition-all duration-300" />
+                            <div className="relative bg-slate-900/90 border border-white/10 rounded-2xl p-4 group-hover:-translate-y-0.5 group-hover:shadow-xl transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3 flex-1">
+                                  {/* Rank badge + avatar */}
+                                  <div className="relative flex-shrink-0">
+                                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                                      <span className="text-white text-sm font-black">
+                                        {getInitials(candidate.name)}
+                                      </span>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="font-semibold text-sm text-slate-900">{candidate.name}</h3>
-                                      <p className="text-xs text-slate-500">{candidate.title} · {candidate.company}</p>
-                                      <p className="text-xs text-slate-600 mt-1.5 leading-relaxed line-clamp-2">{candidate.bio}</p>
-                                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                        <span>{candidate.years_experience}y exp</span>
-                                        <span>·</span>
-                                        <span>{candidate.board_count} board seats</span>
-                                      </div>
+                                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                                      <span className="text-white text-[8px] font-black">#{index + 1}</span>
                                     </div>
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-xs h-7 px-2.5"
-                                  >
-                                    View
-                                  </Button>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-white">{candidate.name}</h3>
+                                    <p className="text-sm text-slate-400">{candidate.title} · {candidate.company}</p>
+                                    <p className="text-sm text-slate-300 mt-1.5 leading-relaxed line-clamp-2">{candidate.bio}</p>
+                                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                      <span>{candidate.years_experience}y exp</span>
+                                      <span>·</span>
+                                      <span>{candidate.board_count} board seats</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </CardContent>
-                            </Card>
+                                <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-3 px-3 py-1.5 text-xs font-semibold bg-slate-800 border border-white/10 text-slate-300 rounded-lg hover:border-cyan-500/50 hover:text-white transition-colors duration-200">
+                                  View
+                                </button>
+                              </div>
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -232,42 +226,43 @@ export default function AISearch() {
                   {/* Board Results */}
                   {boardResults.length > 0 && (searchType === 'all' || searchType === 'boards') && (
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <h2 className="text-sm font-semibold text-slate-700">Boards</h2>
-                        <Badge className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">{boardResults.length}</Badge>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Building2 className="h-4 w-4 text-emerald-400" />
+                        <h2 className="text-base font-bold text-white">Boards</h2>
+                        <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-300 text-xs font-bold">
+                          {boardResults.length}
+                        </span>
                       </div>
                       <div className="space-y-3">
                         {boardResults.map((board, index) => (
                           <motion.div
                             key={board.id}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.06 + 0.1 }}
+                            transition={{ delay: index * 0.07 + 0.1 }}
+                            className="group relative"
                           >
-                            <Card className="hover:border-emerald-200 hover:shadow-sm transition-all duration-200 group border-slate-200">
-                              <CardContent className="p-4">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                      <span className="text-xs font-bold text-emerald-600">#{index + 1}</span>
-                                      <h3 className="font-semibold text-sm text-slate-900">{board.company_name}</h3>
-                                      {board.ticker && (
-                                        <Badge className="font-mono text-xs bg-emerald-50 text-emerald-700 border-emerald-200">{board.ticker}</Badge>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-slate-500">{board.sector}</p>
-                                    <p className="text-xs text-slate-600 mt-1.5 leading-relaxed line-clamp-2">{board.description}</p>
+                            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-600 opacity-0 group-hover:opacity-60 blur-sm transition-all duration-300" />
+                            <div className="relative bg-slate-900/90 border border-white/10 rounded-2xl p-4 group-hover:-translate-y-0.5 group-hover:shadow-xl transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2.5 mb-1">
+                                    <span className="text-xs font-black text-emerald-400">#{index + 1}</span>
+                                    <h3 className="font-bold text-white">{board.company_name}</h3>
+                                    {board.ticker && (
+                                      <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-300 text-xs font-mono font-bold">
+                                        {board.ticker}
+                                      </span>
+                                    )}
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 text-xs h-7 px-2.5"
-                                  >
-                                    View
-                                  </Button>
+                                  <p className="text-sm text-slate-400">{board.sector}</p>
+                                  <p className="text-sm text-slate-300 mt-1.5 leading-relaxed line-clamp-2">{board.description}</p>
                                 </div>
-                              </CardContent>
-                            </Card>
+                                <button className="opacity-0 group-hover:opacity-100 transition-opacity ml-3 px-3 py-1.5 text-xs font-semibold bg-slate-800 border border-white/10 text-slate-300 rounded-lg hover:border-emerald-500/50 hover:text-white transition-colors duration-200">
+                                  View
+                                </button>
+                              </div>
+                            </div>
                           </motion.div>
                         ))}
                       </div>
@@ -282,28 +277,33 @@ export default function AISearch() {
         {/* Example queries */}
         {!searched && !loading && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-slate-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-slate-700">Example Searches</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-2">
-                {examples.map((ex, i) => (
-                  <motion.button
-                    key={i}
-                    whileHover={{ x: 4 }}
-                    onClick={() => setQuery(ex)}
-                    className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-all duration-200 group"
-                  >
-                    <svg className="text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                    <span className="text-sm text-slate-600 group-hover:text-blue-700 transition-colors">{ex}</span>
-                  </motion.button>
-                ))}
-              </CardContent>
-            </Card>
+            <div className="relative group">
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-slate-700 to-slate-600 opacity-50 blur-sm" />
+              <div className="relative bg-slate-900/90 border border-white/10 rounded-2xl p-6">
+                <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">
+                  Example Searches
+                </h2>
+                <div className="space-y-2">
+                  {examples.map((ex, i) => (
+                    <motion.button
+                      key={i}
+                      whileHover={{ x: 6 }}
+                      onClick={() => setQuery(ex)}
+                      className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/40 transition-all duration-200 group/btn"
+                    >
+                      <Search className="h-4 w-4 text-slate-500 group-hover/btn:text-blue-400 transition-colors flex-shrink-0" />
+                      <span className="text-sm text-slate-300 group-hover/btn:text-white transition-colors">
+                        {ex}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </div>
