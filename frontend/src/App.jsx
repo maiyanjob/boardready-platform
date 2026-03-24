@@ -5,6 +5,7 @@ import Candidates from './pages/Candidates';
 import Boards from './pages/Boards';
 import Match from './pages/Match';
 import AISearch from './pages/AISearch';
+import ImportExport from './pages/ImportExport';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/boards" element={<Boards />} />
         <Route path="/match" element={<Match />} />
         <Route path="/search" element={<AISearch />} />
+        <Route path="/import-export" element={<ImportExport />} />
       </Routes>
     </Router>
   );

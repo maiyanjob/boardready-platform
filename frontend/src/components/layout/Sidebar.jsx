@@ -6,13 +6,14 @@ const navigation = [
   { name: 'Boards', path: '/boards' },
   { name: 'AI Search', path: '/search' },
   { name: 'Match', path: '/match' },
+  { name: 'Import/Export', path: '/import-export' },
 ];
 
 export default function Sidebar() {
   const location = useLocation();
 
   return (
-    <div className="w-64 bg-gray-900 min-h-screen p-4">
+    <div className="w-64 bg-slate-900 min-h-screen p-4 border-r border-slate-800">
       <div className="text-white text-2xl font-bold mb-8">
         BoardReady
       </div>
@@ -27,7 +28,7 @@ export default function Sidebar() {
               className={`block px-4 py-2 rounded-md transition-colors ${
                 isActive
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  : 'text-gray-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
               {item.name}
