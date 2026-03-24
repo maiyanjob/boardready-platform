@@ -4,7 +4,7 @@ import { Upload, Download, FileText, Users, Building2, AlertCircle, CheckCircle 
 import axios from 'axios';
 
 export default function ImportExport() {
-  const [importType, setImportType] = useState('candidates'); // 'candidates' or 'boards'
+  const [importType, setImportType] = useState('candidates');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
@@ -36,6 +36,7 @@ export default function ImportExport() {
       setResult({
         success: true,
         added: response.data.added,
+        skipped: response.data.skipped,
         errors: response.data.errors || []
       });
       setFile(null);
@@ -59,7 +60,6 @@ export default function ImportExport() {
         }
       );
 
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -76,7 +76,6 @@ export default function ImportExport() {
     <div className="flex min-h-screen bg-slate-950">
       <Sidebar />
       <div className="flex-1 p-8">
-        {/* Header */}
         <div className="mb-10">
           <h1 className="text-5xl font-black mb-2">
             <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -139,7 +138,6 @@ export default function ImportExport() {
                 Upload CSV files to bulk import candidates or boards with AI embeddings.
               </p>
 
-              {/* Import Type Selector */}
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() => setImportType('candidates')}
@@ -163,7 +161,6 @@ export default function ImportExport() {
                 </button>
               </div>
 
-              {/* File Upload */}
               <div className="mb-6">
                 <label className="block mb-3">
                   <div className="relative border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-blue-500/50 transition-all cursor-pointer">
@@ -223,14 +220,19 @@ export default function ImportExport() {
                       {result.success ? (
                         <>
                           <p className="text-emerald-300 font-semibold mb-1">
-                            Successfully imported {result.added} {importType}!
+                            ✅ Imported {result.added} new {importType}
                           </p>
+                          {result.skipped > 0 && (
+                            <p className="text-yellow-300 text-sm">
+                              ⏭️ Skipped {result.skipped} duplicate{result.skipped !== 1 ? 's' : ''}
+                            </p>
+                          )}
                           {result.errors.length > 0 && (
                             <div className="mt-2">
-                              <p className="text-yellow-300 text-sm font-semibold mb-1">
-                                {result.errors.length} errors:
+                              <p className="text-red-300 text-sm font-semibold mb-1">
+                                ❌ {result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:
                               </p>
-                              <ul className="text-xs text-yellow-200 space-y-1">
+                              <ul className="text-xs text-red-200 space-y-1">
                                 {result.errors.slice(0, 5).map((error, i) => (
                                   <li key={i}>• {error}</li>
                                 ))}

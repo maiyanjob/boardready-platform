@@ -93,7 +93,7 @@ def export_boards():
 @csv_bp.route('/import/candidates', methods=['POST'])
 @login_required
 def import_candidates():
-    """Import candidates from CSV"""
+    """Import candidates from CSV with duplicate detection"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
     
@@ -111,6 +111,7 @@ def import_candidates():
         
         db = next(get_db())
         added = 0
+        skipped = 0
         errors = []
         
         for row_num, row in enumerate(csv_reader, start=2):
@@ -118,6 +119,12 @@ def import_candidates():
                 # Validate required fields
                 if not row.get('Name') or not row.get('Bio'):
                     errors.append(f"Row {row_num}: Missing required fields (Name, Bio)")
+                    continue
+                
+                # Check for duplicate by name
+                existing = db.query(Candidate).filter_by(name=row['Name']).first()
+                if existing:
+                    skipped += 1
                     continue
                 
                 # Generate embedding
@@ -151,6 +158,7 @@ def import_candidates():
         return jsonify({
             'success': True,
             'added': added,
+            'skipped': skipped,
             'errors': errors
         })
         
@@ -160,7 +168,7 @@ def import_candidates():
 @csv_bp.route('/import/boards', methods=['POST'])
 @login_required
 def import_boards():
-    """Import boards from CSV"""
+    """Import boards from CSV with duplicate detection"""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
     
@@ -178,6 +186,7 @@ def import_boards():
         
         db = next(get_db())
         added = 0
+        skipped = 0
         errors = []
         
         for row_num, row in enumerate(csv_reader, start=2):
@@ -185,6 +194,12 @@ def import_boards():
                 # Validate required fields
                 if not row.get('Company Name') or not row.get('Description'):
                     errors.append(f"Row {row_num}: Missing required fields (Company Name, Description)")
+                    continue
+                
+                # Check for duplicate by company name
+                existing = db.query(Board).filter_by(company_name=row['Company Name']).first()
+                if existing:
+                    skipped += 1
                     continue
                 
                 # Generate embedding
@@ -219,6 +234,7 @@ def import_boards():
         return jsonify({
             'success': True,
             'added': added,
+            'skipped': skipped,
             'errors': errors
         })
         
