@@ -10,6 +10,7 @@ from models.user import User
 from routes.candidate_routes import candidate_bp
 from routes.board_routes import board_bp
 from routes.csv_routes import csv_bp
+from routes.project_routes import project_bp
 
 load_dotenv()
 
@@ -30,7 +31,7 @@ def load_user(user_id):
     db = next(get_db())
     return db.query(User).get(int(user_id))
 
-# Auth routes (inline since we don't have separate auth_bp file)
+# Auth routes (inline)
 @app.route('/api/register', methods=['POST'])
 def register():
     from flask import request
@@ -98,6 +99,7 @@ def get_current_user():
 app.register_blueprint(candidate_bp, url_prefix='/api')
 app.register_blueprint(board_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api/csv')
+app.register_blueprint(project_bp, url_prefix='/api')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -107,5 +109,6 @@ if __name__ == '__main__':
     print("✅ Flask app ready!")
     print("✅ Board routes loaded!")
     print("✅ CSV routes loaded!")
+    print("✅ Project routes loaded!")
     print("📍 API running on http://localhost:5000")
     app.run(debug=True, port=5000)

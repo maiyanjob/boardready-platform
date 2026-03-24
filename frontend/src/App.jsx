@@ -6,6 +6,8 @@ import Boards from './pages/Boards';
 import Match from './pages/Match';
 import AISearch from './pages/AISearch';
 import ImportExport from './pages/ImportExport';
+import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
         <Route path="/match" element={<Match />} />
         <Route path="/search" element={<AISearch />} />
         <Route path="/import-export" element={<ImportExport />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
       </Routes>
     </Router>
   );
