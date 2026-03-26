@@ -12,6 +12,8 @@ from routes.csv_routes import csv_bp
 from routes.project_routes import project_bp
 from routes.chat_routes import chat_bp
 from routes.document_routes import doc_bp
+from routes.framework_routes import framework_bp
+from routes.dashboard_routes import dashboard_bp
 
 load_dotenv()
 
@@ -99,6 +101,8 @@ app.register_blueprint(csv_bp, url_prefix='/api/csv')
 app.register_blueprint(project_bp, url_prefix='/api')
 app.register_blueprint(chat_bp, url_prefix='/api')
 app.register_blueprint(doc_bp, url_prefix='/api')
+app.register_blueprint(framework_bp, url_prefix='/api')
+app.register_blueprint(dashboard_bp, url_prefix='/api')
 
 @app.route('/api/health', methods=['GET'])
 def health():

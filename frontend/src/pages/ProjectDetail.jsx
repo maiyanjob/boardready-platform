@@ -194,7 +194,7 @@ export default function ProjectDetail() {
 
         {/* Tab Content */}
         {activeTab === 'dashboard' && (
-          <BoardIntelligenceDashboard projectData={dashboardData} />
+          <BoardIntelligenceDashboard projectId={projectId} />
         )}
 
         {activeTab === 'chat' && (

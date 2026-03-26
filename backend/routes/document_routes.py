@@ -54,9 +54,12 @@ def generate_board_report(project_id):
     female_count = 0
     diverse_count = 0
     ai_ready_count = 0
+    ai_ready_directors = []
+    ai_blind_directors = []
     
     ai_keywords = ['AI', 'ML', 'Digital Transformation', 'Technology', 'Cybersecurity', 
-                   'Data', 'Cloud', 'Software', 'Innovation', 'Tech', 'Machine Learning']
+                   'Data', 'Cloud', 'Software', 'Innovation', 'Tech', 'Machine Learning',
+                   'Artificial Intelligence', 'Platform', 'Digital']
     
     for row in board_result:
         matrix_data = row[3] or {}
@@ -67,8 +70,23 @@ def generate_board_report(project_id):
         bio = background.get('bio', '') if isinstance(background, dict) else ''
         
         is_ai_ready = any(keyword.lower() in bio.lower() for keyword in ai_keywords) if bio else False
+        
+        # Build director info
+        director_info = {
+            'name': row[0],
+            'organization': row[1] or 'N/A',
+            'position': row[2] or 'Director',
+            'bio_snippet': bio[:200] + '...' if len(bio) > 200 else bio
+        }
+        
         if is_ai_ready:
             ai_ready_count += 1
+            # Find which keywords matched
+            keywords_found = [kw for kw in ai_keywords if kw.lower() in bio.lower()]
+            director_info['keywords'] = ', '.join(keywords_found[:3])
+            ai_ready_directors.append(director_info)
+        else:
+            ai_blind_directors.append(director_info)
         
         if gender == 'Female':
             female_count += 1
@@ -110,13 +128,13 @@ def generate_board_report(project_id):
     ai_ready_percentage = round((ai_ready_count / total_members * 100), 1) if total_members > 0 else 0
     
     # AI Readiness Grade
-    if ai_ready_percentage >= 40:
+    if ai_ready_percentage >= 60:
         ai_grade, ai_rating = 'A', 'Excellent'
-    elif ai_ready_percentage >= 30:
+    elif ai_ready_percentage >= 45:
         ai_grade, ai_rating = 'B', 'Good'
-    elif ai_ready_percentage >= 20:
+    elif ai_ready_percentage >= 30:
         ai_grade, ai_rating = 'C', 'Fair'
-    elif ai_ready_percentage >= 10:
+    elif ai_ready_percentage >= 15:
         ai_grade, ai_rating = 'D', 'Poor'
     else:
         ai_grade, ai_rating = 'F', 'Critical Gap'
@@ -136,7 +154,7 @@ def generate_board_report(project_id):
     else:
         defense_rating, defense_color = 'Vulnerable', 'Red'
     
-    # Context
+    # Context with enhanced director lists
     context = {
         'client_name': project['client_name'],
         'board_name': project['board_name'],
@@ -165,7 +183,11 @@ def generate_board_report(project_id):
         'ai_blind_members': total_members - ai_ready_count,
         'defense_score': defense_score,
         'defense_rating': defense_rating,
-        'defense_color': defense_color
+        'defense_color': defense_color,
+        
+        # NEW: Detailed director lists
+        'ai_ready_directors': ai_ready_directors,
+        'ai_blind_directors': ai_blind_directors
     }
     
     template_path = get_template_path(doc_type)
@@ -236,27 +258,104 @@ def create_template(template_path, doc_type):
     doc.save(template_path)
 
 def create_ai_readiness_template(doc):
+    """Enhanced AI Readiness Scorecard with detailed analysis"""
     title = doc.add_heading('AI Readiness Scorecard', 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
+    # Header
     doc.add_paragraph('Client: {{ client_name }}')
     doc.add_paragraph('Board: {{ board_name }}')
     doc.add_paragraph('Date: {{ report_date }}')
     doc.add_paragraph()
     
-    doc.add_heading('AI Readiness Grade', 1)
-    doc.add_paragraph('Overall Grade: {{ ai_grade }} ({{ ai_rating }})')
-    doc.add_paragraph('AI-Ready Directors: {{ ai_ready_count }} of {{ total_members }} ({{ ai_ready_percentage }}%)')
-    doc.add_paragraph('AI-Blind Directors: {{ ai_blind_members }}')
+    # Executive Summary
+    doc.add_heading('Executive Summary', 1)
+    doc.add_paragraph(
+        'In 2026, shareholders are demanding boards with AI/ML oversight capability. '
+        'This comprehensive scorecard audits your board\'s collective technical readiness '
+        'for the AI era, analyzing director backgrounds for technology expertise, '
+        'AI/ML knowledge, and digital transformation experience.'
+    )
     doc.add_paragraph()
     
-    doc.add_heading('Analysis', 1)
+    # Overall Grade - Make it prominent
+    doc.add_heading('Overall AI Readiness Assessment', 1)
+    doc.add_paragraph('Grade: {{ ai_grade }} ({{ ai_rating }})')
+    doc.add_paragraph('AI-Ready Directors: {{ ai_ready_count }} of {{ total_members }} ({{ ai_ready_percentage }}%)')
+    doc.add_paragraph('Directors Requiring AI Upskilling: {{ ai_blind_members }}')
+    doc.add_paragraph()
+    
+    # Benchmarking
+    doc.add_heading('Industry Benchmarking', 1)
+    doc.add_paragraph('Your Board AI Readiness: {{ ai_ready_percentage }}%')
+    doc.add_paragraph('S&P 500 Average: ~35%')
+    doc.add_paragraph('Target Best-in-Class: 60%+')
+    doc.add_paragraph()
+    
+    # AI-Ready Directors Section
+    doc.add_heading('AI-Ready Directors ({{ ai_ready_count }})', 1)
     doc.add_paragraph(
-        'This scorecard analyzes board members for AI/ML expertise based on '
-        'keywords: AI, Machine Learning, Digital Transformation, Technology, Data, Cloud.'
+        'The following directors demonstrate AI/ML oversight capability based on their '
+        'professional backgrounds and experience:'
     )
+    doc.add_paragraph()
+    
+    # This will be populated with actual data
+    doc.add_paragraph('{% for director in ai_ready_directors %}')
+    doc.add_paragraph('✓ {{ director.name }}', style='List Bullet')
+    doc.add_paragraph('   Position: {{ director.position }} at {{ director.organization }}')
+    doc.add_paragraph('   Expertise: {{ director.keywords }}')
+    doc.add_paragraph('   {{ director.bio_snippet }}')
+    doc.add_paragraph()
+    doc.add_paragraph('{% endfor %}')
+    
+    # AI-Blind Directors Section
+    doc.add_heading('Directors Requiring AI Governance Training ({{ ai_blind_members }})', 1)
+    doc.add_paragraph(
+        'The following directors may benefit from AI governance education or '
+        'upskilling programs:'
+    )
+    doc.add_paragraph()
+    
+    doc.add_paragraph('{% for director in ai_blind_directors %}')
+    doc.add_paragraph('⚠ {{ director.name }}', style='List Bullet')
+    doc.add_paragraph('   Position: {{ director.position }} at {{ director.organization }}')
+    doc.add_paragraph('   Background: {{ director.bio_snippet }}')
+    doc.add_paragraph()
+    doc.add_paragraph('{% endfor %}')
+    
+    # Methodology
+    doc.add_heading('Analysis Methodology', 1)
+    doc.add_paragraph(
+        'We analyzed director biographies for the following technical expertise indicators:'
+    )
+    doc.add_paragraph('• AI/ML and Artificial Intelligence', style='List Bullet')
+    doc.add_paragraph('• Digital Transformation initiatives', style='List Bullet')
+    doc.add_paragraph('• Cloud Computing and Platform development', style='List Bullet')
+    doc.add_paragraph('• Data Strategy and Analytics', style='List Bullet')
+    doc.add_paragraph('• Cybersecurity and Technology Leadership', style='List Bullet')
+    doc.add_paragraph('• Software and Innovation management', style='List Bullet')
+    doc.add_paragraph()
+    
+    # Recommendations
+    doc.add_heading('Strategic Recommendations', 1)
+    doc.add_paragraph()
+    
+    doc.add_heading('Immediate Actions', 2)
+    doc.add_paragraph('1. Implement board-level AI governance training for all directors')
+    doc.add_paragraph('2. Consider recruiting a Technical Director with hands-on AI/ML experience')
+    doc.add_paragraph('3. Establish AI Strategy Committee with technical expertise representation')
+    doc.add_paragraph('4. Schedule quarterly AI briefings on emerging technologies and risks')
+    doc.add_paragraph()
+    
+    doc.add_heading('Long-term Strategy', 2)
+    doc.add_paragraph('• Target 60%+ board composition with technology/digital backgrounds')
+    doc.add_paragraph('• Ensure AI ethics and risk management expertise at board level')
+    doc.add_paragraph('• Develop AI oversight framework and governance policies')
+    doc.add_paragraph('• Regular assessment of board AI readiness as technology evolves')
 
 def create_activist_defense_template(doc):
+    """Activist Defense Audit"""
     title = doc.add_heading('Activist Defense Audit', 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
@@ -274,6 +373,7 @@ def create_activist_defense_template(doc):
     doc.add_paragraph('Racial Diversity: {{ diverse_percentage }}%')
 
 def create_board_analysis_template(doc):
+    """Board Analysis Report"""
     title = doc.add_heading('Board Analysis Report', 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
