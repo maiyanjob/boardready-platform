@@ -6,87 +6,41 @@ export default {
     './components/**/*.{js,jsx}',
     './app/**/*.{js,jsx}',
     './src/**/*.{js,jsx}',
+    './node_modules/@tremor/**/*.{js,ts,jsx,tsx}',
   ],
+  prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+        tremor: {
+          brand: {
+            faint: '#06b6d4',
+            muted: '#0891b2',
+            subtle: '#0e7490',
+            DEFAULT: '#0369a1',
+            emphasis: '#075985',
+            inverted: '#ffffff',
+          },
+          background: {
+            muted: '#0f172a',
+            subtle: '#1e293b',
+            DEFAULT: '#0f172a',
+            emphasis: '#334155',
+          },
+          border: {
+            DEFAULT: '#334155',
+          },
+          ring: {
+            DEFAULT: '#06b6d4',
+          },
+          content: {
+            subtle: '#64748b',
+            DEFAULT: '#cbd5e1',
+            emphasis: '#f1f5f9',
+            strong: '#ffffff',
+            inverted: '#0f172a',
+          },
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
-        },
-        "fade-in": {
-          from: { opacity: 0, transform: "translateY(8px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
-        },
-        "slide-in": {
-          from: { opacity: 0, transform: "translateX(-12px)" },
-          to: { opacity: 1, transform: "translateX(0)" },
-        },
-        "scale-in": {
-          from: { opacity: 0, transform: "scale(0.96)" },
-          to: { opacity: 1, transform: "scale(1)" },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.4s ease-out",
-        "slide-in": "slide-in 0.3s ease-out",
-        "scale-in": "scale-in 0.3s ease-out",
       },
     },
   },

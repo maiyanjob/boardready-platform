@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Sidebar from '../components/layout/Sidebar';
 import BoardMatrix from '../components/BoardMatrix';
+import ChatInterface from '../components/ChatInterface';
+import BoardIntelligenceDashboard from '../components/BoardIntelligenceDashboard';
 import { 
-  ArrowLeft, Users, AlertCircle, TrendingUp, Plus, 
-  Calendar, Table
+  ArrowLeft, Users, AlertCircle, TrendingUp, 
+  Calendar, Table, MessageSquare, BarChart3
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -13,7 +15,7 @@ export default function ProjectDetail() {
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   useEffect(() => {
     fetchProject();
@@ -58,6 +60,14 @@ export default function ProjectDetail() {
       </div>
     );
   }
+
+  // Calculate metrics for dashboard
+  const dashboardData = {
+    female_percentage: calculateGenderPercentage(project.board_members),
+    racial_diversity_percentage: calculateRacialDiversity(project.board_members),
+    critical_gaps: project.gaps.filter(g => g.priority === 'critical').length,
+    avg_tenure: 7
+  };
 
   const getPriorityColor = (priority) => {
     const colors = {
@@ -108,7 +118,6 @@ export default function ProjectDetail() {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {/* Stats cards here - keeping existing code */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative group">
             <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-600 opacity-50 blur-sm" />
             <div className="relative bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
@@ -155,10 +164,10 @@ export default function ProjectDetail() {
         <div className="mb-8">
           <div className="flex gap-2 border-b border-slate-800">
             {[
-              { id: 'overview', label: 'Overview' },
+              { id: 'dashboard', label: 'Intelligence Dashboard', icon: BarChart3 },
               { id: 'matrix', label: 'Board Matrix', icon: Table },
-              { id: 'gaps', label: 'Gap Analysis' },
-              { id: 'candidates', label: 'Pipeline' }
+              { id: 'chat', label: 'AI Assistant', icon: MessageSquare },
+              { id: 'gaps', label: 'Gap Analysis' }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -167,7 +176,7 @@ export default function ProjectDetail() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-6 py-3 font-semibold capitalize transition-all flex items-center gap-2 ${
                     activeTab === tab.id
-                      ? 'text-white border-b-2 border-blue-500'
+                      ? 'text-white border-b-2 border-cyan-500'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -180,17 +189,20 @@ export default function ProjectDetail() {
         </div>
 
         {/* Tab Content */}
+        {activeTab === 'dashboard' && (
+          <BoardIntelligenceDashboard projectData={dashboardData} />
+        )}
+
+        {activeTab === 'chat' && (
+          <ChatInterface projectId={projectId} />
+        )}
+
         {activeTab === 'matrix' && (
           <BoardMatrix boardMembers={project.board_members} />
         )}
 
         {activeTab === 'gaps' && (
           <div className="space-y-4">
-            {/* Keep existing gaps code */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Gap Analysis</h2>
-            </div>
-
             {project.gaps.map((gap, index) => (
               <motion.div
                 key={gap.id}
@@ -199,7 +211,7 @@ export default function ProjectDetail() {
                 transition={{ delay: index * 0.05 }}
                 className="relative group"
               >
-                <div className={`absolute -inset-[1px] rounded-2xl blur-sm transition-all duration-500 ${
+                <div className={`absolute -inset-[1px] rounded-2xl blur-sm ${
                   gap.priority === 'critical' ? 'bg-gradient-to-r from-red-500 to-orange-600 opacity-50' :
                   gap.priority === 'high' ? 'bg-gradient-to-r from-amber-500 to-yellow-600 opacity-50' :
                   'bg-gradient-to-r from-blue-500 to-cyan-600 opacity-50'
@@ -216,83 +228,28 @@ export default function ProjectDetail() {
                       <p className="text-slate-300">{gap.description}</p>
                     </div>
                   </div>
-
-                  {gap.target_profile && (
-                    <div className="mt-4 pt-4 border-t border-slate-800">
-                      <div className="text-sm font-semibold text-slate-400 mb-2">Target Profile:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {gap.target_profile.expertise_required?.map((exp, i) => (
-                          <span key={i} className="px-3 py-1 bg-cyan-500/10 text-cyan-400 text-xs font-semibold rounded-full border border-cyan-500/20">
-                            {exp}
-                          </span>
-                        ))}
-                        {gap.target_profile.demographics_preferred?.gender && (
-                          <span className="px-3 py-1 bg-purple-500/10 text-purple-400 text-xs font-semibold rounded-full border border-purple-500/20">
-                            {gap.target_profile.demographics_preferred.gender}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             ))}
           </div>
         )}
-
-        {activeTab === 'candidates' && (
-          <div className="text-center py-20">
-            <TrendingUp className="h-16 w-16 text-slate-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-slate-300 mb-2">No candidates yet</h2>
-            <p className="text-slate-400 mb-6">Start sourcing candidates for this search</p>
-            <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 text-white font-bold rounded-xl">
-              Source Candidates
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Keep existing overview code... */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white mb-4">Quick Overview</h2>
-              
-              {project.description && (
-                <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                  <h3 className="text-sm font-semibold text-slate-400 mb-2">Description</h3>
-                  <p className="text-white">{project.description}</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">Priority Gaps</h2>
-              <div className="space-y-3">
-                {project.gaps.slice(0, 3).map((gap) => (
-                  <div key={gap.id} className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-xl p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className={`h-4 w-4 ${
-                            gap.priority === 'critical' ? 'text-red-400' :
-                            gap.priority === 'high' ? 'text-amber-400' :
-                            'text-blue-400'
-                          }`} />
-                          <h4 className="font-semibold text-white">{gap.title}</h4>
-                        </div>
-                        <p className="text-sm text-slate-400 line-clamp-2">{gap.description}</p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(gap.priority)}`}>
-                        {gap.priority}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
+}
+
+function calculateGenderPercentage(members) {
+  if (!members || members.length === 0) return 0;
+  const female = members.filter(m => 
+    m.matrix_data?.demographics?.gender === 'Female'
+  ).length;
+  return Math.round((female / members.length) * 100);
+}
+
+function calculateRacialDiversity(members) {
+  if (!members || members.length === 0) return 0;
+  const diverse = members.filter(m => 
+    m.matrix_data?.demographics?.race_ethnicity !== 'Caucasian'
+  ).length;
+  return Math.round((diverse / members.length) * 100);
 }

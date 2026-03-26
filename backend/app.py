@@ -1,7 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
-from werkzeug.security import check_password_hash
 from dotenv import load_dotenv
 import os
 
@@ -11,6 +10,7 @@ from routes.candidate_routes import candidate_bp
 from routes.board_routes import board_bp
 from routes.csv_routes import csv_bp
 from routes.project_routes import project_bp
+from routes.chat_routes import chat_bp
 
 load_dotenv()
 
@@ -35,7 +35,6 @@ def load_user(user_id):
 @app.route('/api/register', methods=['POST'])
 def register():
     from flask import request
-    from werkzeug.security import generate_password_hash
     
     data = request.get_json()
     db = next(get_db())
@@ -100,6 +99,7 @@ app.register_blueprint(candidate_bp, url_prefix='/api')
 app.register_blueprint(board_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api/csv')
 app.register_blueprint(project_bp, url_prefix='/api')
+app.register_blueprint(chat_bp, url_prefix='/api')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -107,8 +107,6 @@ def health():
 
 if __name__ == '__main__':
     print("✅ Flask app ready!")
-    print("✅ Board routes loaded!")
-    print("✅ CSV routes loaded!")
-    print("✅ Project routes loaded!")
+    print("✅ Chat routes loaded!")
     print("📍 API running on http://localhost:5000")
     app.run(debug=True, port=5000)
