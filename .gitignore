@@ -33,3 +33,13 @@ dist/
 
 # Logs
 *.log
+
+# Obsidian Vault (contains sensitive research and candidate data)
+../Documents/BoardReady-Vault/
+BoardReady-Vault/
+
+# Obsidian config files
+.obsidian/
+
+# MCP configuration (may contain API keys)
+.mcp/
