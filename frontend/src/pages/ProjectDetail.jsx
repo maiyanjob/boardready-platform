@@ -5,6 +5,7 @@ import Sidebar from '../components/layout/Sidebar';
 import BoardMatrix from '../components/BoardMatrix';
 import ChatInterface from '../components/ChatInterface';
 import BoardIntelligenceDashboard from '../components/BoardIntelligenceDashboard';
+import DocumentTypeSelector from '../components/DocumentTypeSelector';
 import { 
   ArrowLeft, Users, AlertCircle, TrendingUp, 
   Calendar, Table, MessageSquare, BarChart3
@@ -61,7 +62,6 @@ export default function ProjectDetail() {
     );
   }
 
-  // Calculate metrics for dashboard
   const dashboardData = {
     female_percentage: calculateGenderPercentage(project.board_members),
     racial_diversity_percentage: calculateRacialDiversity(project.board_members),
@@ -104,6 +104,10 @@ export default function ProjectDetail() {
             </div>
             
             <div className="flex items-center gap-3">
+              <DocumentTypeSelector 
+                projectId={projectId} 
+                clientName={project.client_name}
+              />
               {project.company_ticker && (
                 <span className="px-4 py-2 text-sm font-bold bg-slate-800 text-cyan-400 rounded-lg">
                   {project.company_ticker}

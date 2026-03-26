@@ -11,6 +11,7 @@ from routes.board_routes import board_bp
 from routes.csv_routes import csv_bp
 from routes.project_routes import project_bp
 from routes.chat_routes import chat_bp
+from routes.document_routes import doc_bp
 
 load_dotenv()
 
@@ -19,10 +20,8 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 
-# CORS configuration
 CORS(app, supports_credentials=True, origins=['http://localhost:5173'])
 
-# Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -31,7 +30,6 @@ def load_user(user_id):
     db = next(get_db())
     return db.query(User).get(int(user_id))
 
-# Auth routes (inline)
 @app.route('/api/register', methods=['POST'])
 def register():
     from flask import request
@@ -100,6 +98,7 @@ app.register_blueprint(board_bp, url_prefix='/api')
 app.register_blueprint(csv_bp, url_prefix='/api/csv')
 app.register_blueprint(project_bp, url_prefix='/api')
 app.register_blueprint(chat_bp, url_prefix='/api')
+app.register_blueprint(doc_bp, url_prefix='/api')
 
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -107,6 +106,6 @@ def health():
 
 if __name__ == '__main__':
     print("✅ Flask app ready!")
-    print("✅ Chat routes loaded!")
+    print("✅ Document generation routes loaded!")
     print("📍 API running on http://localhost:5000")
     app.run(debug=True, port=5000)
