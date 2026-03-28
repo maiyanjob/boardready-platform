@@ -55,23 +55,26 @@ def create_candidate():
 def get_candidates():
     """Get all candidates"""
     db = SessionLocal()
-    
-    candidates = db.query(Candidate).all()
-    
-    return jsonify({
-        'candidates': [{
-            'id': c.id,
-            'name': c.name,
-            'title': c.title,
-            'company': c.company,
-            'bio': c.bio,
-            'linkedin_url': c.linkedin_url,
-            'years_experience': c.years_experience,
-            'board_count': c.board_count,
-            'industries': c.industries,
-            'skills': c.skills
-        } for c in candidates]
-    })
+    try:
+        candidates = db.query(Candidate).all()
+        
+        return jsonify({
+            'candidates': [{
+                'id': c.id,
+                'name': c.name,
+                'title': c.title,
+                'company': c.company,
+                'bio': c.bio,
+                'linkedin_url': c.linkedin_url,
+                'years_experience': c.years_experience,
+                'board_count': c.board_count,
+                'industries': c.industries,
+                'skills': c.skills,
+                'gap_coverage_scores': getattr(c, 'gap_coverage_scores', None)
+            } for c in candidates]
+        })
+    finally:
+        db.close()
 
 @candidate_bp.route('/candidates/search', methods=['POST'])
 @login_required

@@ -1,11 +1,138 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from models.base import get_db
-from sqlalchemy import text
+from models.candidate import Candidate, ProjectCandidate
+from services.claude_service import claude_service
+from services.document_service import document_service
+from sqlalchemy import text, func
 from datetime import datetime, date
 import json
 
 project_bp = Blueprint('projects', __name__)
+
+@project_bp.route('/projects/<int:project_id>/candidates', methods=['GET'])
+@login_required
+def get_project_candidates(project_id):
+    """
+    Get candidates for a project with real-time semantic gap scoring.
+    1. Fetch project gaps from project_gaps_v2
+    2. Join project_candidates with candidates
+    3. Compare candidate bio_embedding with gap_title embeddings
+    4. Save scores and return
+    """
+    db_gen = get_db()
+    db = next(db_gen)
+
+    try:
+        project_result = db.execute(text("""
+            SELECT client_name, description
+            FROM projects
+            WHERE id = :pid AND deleted_at IS NULL
+        """), {"pid": project_id}).fetchone()
+
+        if not project_result:
+            return jsonify({'error': 'Project not found'}), 404
+
+        project_name = project_result[0] or "Board Search"
+        project_desc = project_result[1] or ""
+
+        # 1. Fetch gaps for this project
+        # Note: We need embeddings for these gaps to do pgvector comparison.
+        gaps_result = db.execute(text("""
+            SELECT category_name, category_id
+            FROM project_gaps_v2
+            WHERE project_id = :pid
+        """), {"pid": project_id}).fetchall()
+        
+        if not gaps_result:
+            return jsonify({'success': True, 'candidates': []})
+        
+        # Prepare gap embeddings (cached in memory for this request)
+        gap_embeddings = {}
+        for row in gaps_result:
+            cat_name = row[0]
+            cat_id = row[1]
+            
+            # Check if we have an embedding in gap_analysis.
+            emb_result = db.execute(text("""
+                SELECT gap_embedding FROM gap_analysis 
+                WHERE project_id = :pid AND gap_title = :title
+                LIMIT 1
+            """), {"pid": project_id, "title": cat_name}).fetchone()
+            
+            # Fallback to generating if missing
+            if not emb_result or not emb_result[0]:
+                print(f"Generating missing embedding for gap: {cat_name}")
+                embedding = claude_service.generate_embedding(cat_name)
+                if embedding:
+                    gap_embeddings[cat_name] = embedding
+            else:
+                gap_embeddings[cat_name] = emb_result[0]
+        
+        # 2. Fetch candidates for this project
+        candidates_query = db.query(ProjectCandidate, Candidate).join(
+            Candidate, ProjectCandidate.candidate_id == Candidate.id
+        ).filter(ProjectCandidate.project_id == project_id).all()
+        
+        results = []
+        
+        for pc, c in candidates_query:
+            candidate_scores = {}
+            total_fit = 0
+            
+            if c.bio_embedding is not None and gap_embeddings:
+                for gap_name, gap_emb in gap_embeddings.items():
+                    sim_result = db.execute(text("""
+                        SELECT 1 - (CAST(:c_emb AS vector) <=> CAST(:g_emb AS vector)) AS similarity
+                    """), {
+                        "c_emb": str(c.bio_embedding.tolist()),
+                        "g_emb": str(gap_emb if isinstance(gap_emb, list) else list(gap_emb))
+                    }).fetchone()
+                    
+                    score = float(sim_result[0]) if sim_result else 0.0
+                    candidate_scores[gap_name] = round(score * 100, 1)
+                    total_fit += score
+            
+            pc.gap_coverage_scores = {
+                "gaps_filled": [name for name, score in candidate_scores.items() if score >= 70],
+                "gap_scores": candidate_scores,
+                "total_gaps_addressed": len(candidate_scores),
+                "weighted_score": round((total_fit / len(gap_embeddings) * 100), 1) if gap_embeddings else 0
+            }
+            pc.overall_match_score = pc.gap_coverage_scores["weighted_score"] / 100.0
+            
+            if not pc.match_reasoning:
+                pc.match_reasoning = document_service.generate_strategy_fit_summary(
+                    c.name, 
+                    candidate_scores, 
+                    project_name=project_name, 
+                    project_description=project_desc
+                )
+            
+            results.append({
+                'id': pc.id,
+                'candidate_id': c.id,
+                'name': c.name,
+                'title': c.title,
+                'company': c.company,
+                'status': pc.status,
+                'match_score': round(pc.overall_match_score * 100, 1),
+                'gap_coverage_scores': candidate_scores,
+                'match_reasoning': pc.match_reasoning,
+                'source': pc.source
+            })
+        
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'candidates': results
+        })
+    finally:
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
 
 @project_bp.route('/projects', methods=['GET'])
 @login_required

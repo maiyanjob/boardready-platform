@@ -30,7 +30,7 @@ export default function ChatInterface({ projectId }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/projects/${projectId}/chat`,
+        `/api/projects/${projectId}/chat`,
         { message: userMessage },
         { withCredentials: true }
       );

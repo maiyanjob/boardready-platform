@@ -16,7 +16,7 @@ export default function Projects() {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/projects', {
+      const response = await axios.get('/api/projects', {
         withCredentials: true
       });
       setProjects(response.data);
@@ -225,7 +225,7 @@ function CreateProjectModal({ onClose, onSuccess }) {
     setSubmitting(true);
 
     try {
-      await axios.post('http://localhost:5000/api/projects', formData, {
+      await axios.post('/api/projects', formData, {
         withCredentials: true
       });
       onSuccess();

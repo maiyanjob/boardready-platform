@@ -13,7 +13,7 @@ export default function DownloadReportButton({ projectId, clientName }) {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/projects/${projectId}/generate-report`,
+        `/api/projects/${projectId}/generate-report`,
         {},
         {
           withCredentials: true,

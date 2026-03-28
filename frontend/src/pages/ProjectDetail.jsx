@@ -5,6 +5,7 @@ import Sidebar from '../components/layout/Sidebar';
 import BoardMatrix from '../components/BoardMatrix';
 import ChatInterface from '../components/ChatInterface';
 import BoardIntelligenceDashboard from '../components/BoardIntelligenceDashboard';
+import CandidateMatchTab from '../components/CandidateMatchTab';
 import DocumentTypeSelector from '../components/DocumentTypeSelector';
 import { 
   ArrowLeft, Users, AlertCircle, TrendingUp, 
@@ -24,7 +25,7 @@ export default function ProjectDetail() {
 
   const fetchProject = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/projects/${projectId}`, {
+      const response = await axios.get(`/api/projects/${projectId}`, {
         withCredentials: true
       });
       setProject(response.data);
@@ -171,7 +172,8 @@ export default function ProjectDetail() {
               { id: 'dashboard', label: 'Intelligence Dashboard', icon: BarChart3 },
               { id: 'matrix', label: 'Board Matrix', icon: Table },
               { id: 'chat', label: 'AI Assistant', icon: MessageSquare },
-              { id: 'gaps', label: 'Gap Analysis' }
+              { id: 'gaps', label: 'Gap Analysis' },
+              { id: 'match', label: 'Candidate Match' }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -203,6 +205,10 @@ export default function ProjectDetail() {
 
         {activeTab === 'matrix' && (
           <BoardMatrix boardMembers={project.board_members} />
+        )}
+
+        {activeTab === 'match' && (
+          <CandidateMatchTab projectId={project.id} />
         )}
 
         {activeTab === 'gaps' && (

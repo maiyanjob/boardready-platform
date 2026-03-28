@@ -25,7 +25,7 @@ export default function ImportExport() {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/csv/import/${importType}`,
+        `/api/csv/import/${importType}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }
       );
@@ -48,7 +48,7 @@ export default function ImportExport() {
 
   const handleExport = async (type) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/csv/export/${type}`, {
+      const response = await axios.get(`/api/csv/export/${type}`, {
         responseType: 'blob',
         withCredentials: true,
       });

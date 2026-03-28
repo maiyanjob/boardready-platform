@@ -14,7 +14,7 @@ const BoardIntelligenceDashboard = ({ projectId }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${projectId}/dashboard-data`, {
+      const response = await fetch(`/api/projects/${projectId}/dashboard-data`, {
         credentials: 'include'
       });
       const data = await response.json();
