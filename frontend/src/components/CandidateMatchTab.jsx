@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, ChevronDown, ChevronUp, ArrowRight, AlertTriangle } from 'lucide-react';
+import { getProjectCandidates, updateProjectCandidateStatus } from '../lib/api';
+
+const REVIEW_STATUSES = {
+  new:          { label: 'New',          bg: 'bg-slate-700/50',    text: 'text-slate-300',  border: 'border-slate-600/40' },
+  sourced:      { label: 'Sourced',      bg: 'bg-slate-700/50',    text: 'text-slate-300',  border: 'border-slate-600/40' },
+  screened:     { label: 'Screened',     bg: 'bg-blue-500/10',     text: 'text-blue-400',   border: 'border-blue-500/25' },
+  reviewed:     { label: 'Reviewed',     bg: 'bg-indigo-500/10',   text: 'text-indigo-400', border: 'border-indigo-500/25' },
+  shortlisted:  { label: 'Shortlisted',  bg: 'bg-violet-500/10',   text: 'text-violet-400', border: 'border-violet-500/25' },
+  client_ready: { label: 'Client-Ready', bg: 'bg-emerald-500/10',  text: 'text-emerald-400',border: 'border-emerald-500/25' },
+  presented:    { label: 'Presented',    bg: 'bg-cyan-500/10',     text: 'text-cyan-400',   border: 'border-cyan-500/25' },
+  archived:     { label: 'Archived',     bg: 'bg-slate-800/60',    text: 'text-slate-600',  border: 'border-slate-700/40' },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -14,8 +26,6 @@ const formatRelativeTime = (date) => {
 };
 
 const clip = (n, min = 0, max = 100) => Math.min(max, Math.max(min, n));
-
-// ── Strategic scoring (frontend-only, no backend changes) ─────────────────────
 
 /**
  * Gaps this candidate uniquely fills — ≥70% AND no other shortlisted candidate ≥70%.
@@ -73,22 +83,24 @@ const calcStrategicFit = (cand, gaps, allCands, totalGapWeight) => {
 
 /**
  * Strategic tier for each gap × candidate combination.
- * Drives bar labeling and visual hierarchy.
+ * Based purely on board coverage level — board-coverage-based tiers, not shortlist uniqueness.
+ *
+ * EMERALD  candidate ≥70%, board <5%   — fills board blind spot (new capability)
+ * TEAL     candidate ≥70%, board <30%  — strong unique contribution
+ * AMBER    candidate ≥70%, board <70%  — incremental improvement
+ * ROSE     candidate ≥70%, board ≥70%  — redundant with existing directors
  */
-const getGapTier = (gap, candidateScore, cand, allCands) => {
+const getGapTier = (gap, candidateScore) => {
   if (candidateScore >= 70) {
-    if (gap.current_coverage < 10)
-      return { label: 'BLIND SPOT FILL', tier: 4, bar: '#ef4444', badge: 'bg-red-500/15 border-red-500/40 text-red-300' };
-    const isUnique = !allCands.some(o => o.id !== cand.id && (o.expertise[gap.gap_title] || 0) >= 70);
-    if (isUnique)
-      return { label: 'UNIQUE VALUE',    tier: 3, bar: '#14b8a6', badge: 'bg-teal-500/15 border-teal-500/40 text-teal-300' };
-    if (gap.current_coverage >= 60 && (gap.members_with || []).length > 0)
-      return { label: 'REDUNDANT',       tier: 1, bar: '#475569', badge: 'bg-slate-700/50  border-slate-600/40  text-slate-400' };
-    return   { label: 'COMPLEMENTS',     tier: 2, bar: '#818cf8', badge: 'bg-violet-500/15 border-violet-500/40 text-violet-300' };
+    const cov = gap.current_coverage;
+    if (cov < 5)  return { label: 'FILLS BLIND SPOT',    tier: 4, bar: '#10b981', badge: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' };
+    if (cov < 30) return { label: 'UNIQUE CONTRIBUTION', tier: 3, bar: '#14b8a6', badge: 'bg-teal-500/15    border-teal-500/40    text-teal-300'    };
+    if (cov < 70) return { label: 'INCREMENTAL VALUE',   tier: 2, bar: '#f59e0b', badge: 'bg-amber-500/15   border-amber-500/40   text-amber-300'   };
+    return         { label: 'REDUNDANT WITH BOARD',      tier: 1, bar: '#f43f5e', badge: 'bg-rose-500/15    border-rose-500/40    text-rose-300'    };
   }
   if (candidateScore >= 50)
-    return   { label: 'PARTIAL',         tier: 1, bar: '#f59e0b', badge: 'bg-amber-500/15  border-amber-500/40  text-amber-300'  };
-  return     { label: 'LOW',             tier: 0, bar: '#334155', badge: 'bg-slate-800/60  border-slate-700/40  text-slate-600'  };
+    return         { label: 'PARTIAL',                   tier: 1, bar: '#64748b', badge: 'bg-slate-700/50   border-slate-600/40   text-slate-400'   };
+  return           { label: 'LOW',                       tier: 0, bar: '#1e293b', badge: 'bg-slate-800/60   border-slate-700/40   text-slate-600'   };
 };
 
 /**
@@ -132,7 +144,7 @@ const ScoreRing = ({ score, size = 72, isSelected }) => {
       </svg>
       <div className="relative flex flex-col items-center leading-none">
         <span className="text-white font-black" style={{ fontSize: Math.round(size * 0.23) }}>{score}</span>
-        <span className="text-slate-500 uppercase tracking-wider" style={{ fontSize: Math.round(size * 0.1) }}>fit</span>
+        <span className="text-slate-500 uppercase tracking-wider" style={{ fontSize: Math.round(size * 0.1) }}>BRI fit</span>
       </div>
     </div>
   );
@@ -140,10 +152,13 @@ const ScoreRing = ({ score, size = 72, isSelected }) => {
 
 // ── StrategicGapBar ───────────────────────────────────────────────────────────
 
-const StrategicGapBar = ({ gap, candidateScore, cand, allCands }) => {
-  const tier     = getGapTier(gap, candidateScore, cand, allCands);
+const StrategicGapBar = ({ gap, candidateScore }) => {
+  const tier     = getGapTier(gap, candidateScore);
   const shortT   = gap.gap_title.length > 36 ? gap.gap_title.slice(0, 34) + '…' : gap.gap_title;
   const boardCov = Math.round(gap.current_coverage);
+  const boardLabel = boardCov < 5  ? 'Board: ZERO'
+                   : boardCov < 30 ? `Board: only ${boardCov}%`
+                   :                 `Board: ${boardCov}%`;
 
   return (
     <div>
@@ -154,34 +169,39 @@ const StrategicGapBar = ({ gap, candidateScore, cand, allCands }) => {
           {gap.priority !== 'critical' && gap.priority !== 'high' &&
             <span className="w-1.5 h-1.5 rounded-full bg-slate-700 flex-shrink-0" />}
           <span className="text-slate-300 text-xs font-medium truncate">{shortT}</span>
-          <span className={`flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${tier.badge}`}>
+          <span className={`flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${tier.badge}`}>
             {tier.label}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-slate-600 text-[10px]">board {boardCov}%</span>
+          <span className={`text-[10px] ${boardCov < 5 ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
+            {boardLabel}
+          </span>
           <span className="text-white text-xs font-black w-8 text-right">{candidateScore}%</span>
         </div>
       </div>
-      {/* Stacked bar: board coverage (dim) + candidate score (bright) */}
+      {/* Stacked bar: board baseline (dim) + candidate score (bright) */}
       <div className="relative h-2 bg-slate-800/80 rounded-full overflow-hidden">
-        {/* Board baseline */}
-        <div
-          className="absolute h-full rounded-full"
-          style={{ width: `${boardCov}%`, backgroundColor: 'rgba(100,116,139,0.4)' }}
-        />
-        {/* Candidate score */}
-        <div
-          className="absolute h-full rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${candidateScore}%`, backgroundColor: tier.bar, opacity: 0.85 }}
-        />
-        {/* 70% threshold line */}
+        <div className="absolute h-full rounded-full"
+          style={{ width: `${boardCov}%`, backgroundColor: 'rgba(100,116,139,0.35)' }} />
+        <div className="absolute h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${candidateScore}%`, backgroundColor: tier.bar, opacity: 0.88 }} />
         <div className="absolute top-0 bottom-0 w-px bg-slate-500/60" style={{ left: '70%' }} />
       </div>
-      {/* Board coverage annotation only when meaningful */}
-      {boardCov > 0 && boardCov < candidateScore && (
-        <div className="text-[9px] text-slate-600 mt-0.5 pl-0.5">
-          board already at {boardCov}% · candidate adds +{candidateScore - boardCov}pp
+      {/* Strategic annotation */}
+      {boardCov < 5 && candidateScore >= 70 && (
+        <div className="text-[10px] text-emerald-500/80 mt-0.5 pl-0.5 font-semibold">
+          Board has zero coverage — candidate creates entirely new strategic capability
+        </div>
+      )}
+      {boardCov >= 5 && boardCov < 30 && candidateScore >= 70 && (
+        <div className="text-[10px] text-teal-500/70 mt-0.5 pl-0.5">
+          Board barely covers this — candidate brings perspective no current director offers
+        </div>
+      )}
+      {boardCov >= 70 && candidateScore >= 70 && (
+        <div className="text-[10px] text-rose-500/60 mt-0.5 pl-0.5">
+          Board already strong here — low incremental value
         </div>
       )}
     </div>
@@ -309,12 +329,26 @@ export default function CandidateMatchTab({ projectId }) {
   const [refreshing, setRefreshing]       = useState(false);
   const [error, setError]                 = useState(null);
   const [showAll, setShowAll]             = useState(false);
+  const [reviewStatuses, setReviewStatuses] = useState({});
+
+  const setReviewStatus = async (projectCandidateId, status) => {
+    setReviewStatuses(prev => ({ ...prev, [projectCandidateId]: status }));
+    setCandidates(prev => prev.map(candidate => (
+      candidate.pc_id === projectCandidateId ? { ...candidate, status } : candidate
+    )));
+
+    try {
+      await updateProjectCandidateStatus(projectId, projectCandidateId, status);
+    } catch (err) {
+      console.error('Candidate status update failed:', err);
+      fetchCandidates(false);
+    }
+  };
 
   const fetchCandidates = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const res  = await fetch(`/api/projects/${projectId}/candidates`, { credentials: 'include' });
-      const data = await res.json();
+      const { data } = await getProjectCandidates(projectId);
       if (data.success) {
         const mapped = (data.candidates || []).map(item => ({
           id:              item.candidate_id,
@@ -330,6 +364,7 @@ export default function CandidateMatchTab({ projectId }) {
           api_match_score: item.match_score || 0,
         }));
         setCandidates(mapped);
+        setReviewStatuses(Object.fromEntries(mapped.map(candidate => [candidate.pc_id, candidate.status || 'sourced'])));
         setSyncedAt(new Date());
         if (mapped.length > 0) setSelectedId(prev => prev ?? mapped[0].id);
       }
@@ -412,8 +447,8 @@ export default function CandidateMatchTab({ projectId }) {
 
   // Gap bars sorted: blind spots → unique → complements → partial → redundant
   const sortedGapBars = [...gaps].sort((a, b) => {
-    const ta = getGapTier(a, candidate.expertise[a.gap_title] || 0, candidate, candidates).tier;
-    const tb = getGapTier(b, candidate.expertise[b.gap_title] || 0, candidate, candidates).tier;
+    const ta = getGapTier(a, candidate.expertise[a.gap_title] || 0).tier;
+    const tb = getGapTier(b, candidate.expertise[b.gap_title] || 0).tier;
     if (tb !== ta) return tb - ta;
     return (candidate.expertise[b.gap_title] || 0) - (candidate.expertise[a.gap_title] || 0);
   });
@@ -426,12 +461,16 @@ export default function CandidateMatchTab({ projectId }) {
       const before      = Math.round(g.current_coverage);
       const after       = Math.round(Math.max(g.current_coverage, cScore));
       const improvement = Math.round(Math.max(0, cScore - g.current_coverage));
-      const isBlind     = g.current_coverage < 10 && cScore >= 70;
-      const isUnique    = cScore >= 70 && !candidates.some(o => o.id !== candidate.id && (o.expertise[g.gap_title] || 0) >= 70);
+      const isBlind     = g.current_coverage < 5  && cScore >= 70;
+      // isUnique: board barely covers this AND no existing director has it
+      const isUnique    = cScore >= 70 && g.current_coverage < 30 && (g.members_with || []).length === 0;
       const priority    = isBlind ? 4 : isUnique ? 3 : improvement >= 20 ? 2 : improvement > 5 ? 1 : 0;
-      const impactLabel = isBlind ? 'Creates NEW Capability' : isUnique ? 'Only Candidate' : improvement >= 20 ? 'Significant Improvement' : 'Incremental Gain';
+      const impactLabel = isBlind   ? 'Fills Board Blind Spot'
+                        : isUnique  ? 'No Director Has This'
+                        : improvement >= 20 ? 'Significant Improvement'
+                        : 'Incremental Gain';
       const impactBadge = isBlind
-        ? 'bg-red-500/15 border-red-500/30 text-red-300'
+        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
         : isUnique
         ? 'bg-teal-500/15 border-teal-500/30 text-teal-300'
         : improvement >= 20
@@ -452,24 +491,20 @@ export default function CandidateMatchTab({ projectId }) {
 
       {/* ── A: Header ── */}
       <div className="flex items-center justify-between">
-        <div className="text-xs text-slate-600 uppercase tracking-widest font-semibold">
-          {candidates.length} Candidate{candidates.length !== 1 ? 's' : ''} · Strategic Fit Model · Live pgvector
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">
+            TalentVault Shortlist
+          </span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/25 text-violet-400 uppercase tracking-wide">
+            {candidates.length} · TalentVault Strategic Fit Score
+          </span>
         </div>
         <FreshnessIndicator syncedAt={syncedAt} onRefresh={() => fetchCandidates(true)} refreshing={refreshing} />
       </div>
 
-      {/* Score model legend */}
-      <div className="flex items-center gap-5 text-[10px] text-slate-600 border-b border-slate-800/60 pb-3">
-        <span className="text-slate-500 font-semibold uppercase tracking-widest">Strategic Fit =</span>
-        <span className="text-violet-400 font-bold">40% Uniqueness</span>
-        <span className="text-red-400 font-bold">+ 30% Blind Spot Value</span>
-        <span className="text-indigo-400 font-bold">+ 20% Complementary Fit</span>
-        <span className="text-slate-500 font-bold">+ 10% Overall Expertise</span>
-      </div>
-
       {/* ── B: Candidate Roster (top 5, expandable) ── */}
       <div>
-        <div className={`grid gap-3 ${visibleCandidates.length <= 3 ? 'grid-cols-3' : visibleCandidates.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+        <div className={`grid gap-4 ${visibleCandidates.length <= 3 ? 'grid-cols-3' : visibleCandidates.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
           {visibleCandidates.map((cand) => {
             const sf         = calcStrategicFit(cand, gaps, candidates, totalGapWeight);
             const isSelected = cand.id === selectedId;
@@ -489,10 +524,13 @@ export default function CandidateMatchTab({ projectId }) {
                 {isSelected && (
                   <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-violet-600/25 to-teal-500/25 blur-sm -z-10" />
                 )}
+                {/* Top accent bar — strong selected signal */}
+                {isSelected && (
+                  <div className="absolute top-0 inset-x-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-violet-500 to-teal-500" />
+                )}
                 <div className="absolute top-3 left-3.5">
-                  <span className="text-[10px] font-bold text-slate-600">#{r}</span>
+                  <span className="text-xs font-bold text-slate-600">#{r}</span>
                 </div>
-                {isSelected && <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-purple-400" />}
 
                 <div className="flex justify-center mt-3 mb-2.5">
                   <ScoreRing score={sf} size={72} isSelected={isSelected} />
@@ -505,23 +543,28 @@ export default function CandidateMatchTab({ projectId }) {
                   {/* Micro-badges */}
                   <div className="flex justify-center gap-1.5 mt-2.5 flex-wrap">
                     {bs > 0 && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-red-500/15 border-red-500/30 text-red-300 uppercase">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-red-500/15 border-red-500/30 text-red-300 uppercase">
                         {bs} blind spot{bs > 1 ? 's' : ''}
                       </span>
                     )}
                     {uq > 0 && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-teal-500/15 border-teal-500/30 text-teal-300 uppercase">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-teal-500/15 border-teal-500/30 text-teal-300 uppercase">
                         {uq} unique
                       </span>
                     )}
-                    {bs === 0 && uq === 0 && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${
-                        cand.status === 'active'  ? 'text-teal-400 bg-teal-400/10 border-teal-500/30' :
-                        cand.status === 'sourced' ? 'text-blue-400 bg-blue-400/10 border-blue-500/30' :
-                                                    'text-slate-500 bg-slate-700/40 border-slate-600/30'
-                      }`}>{cand.status || 'sourced'}</span>
-                    )}
                   </div>
+                  {/* Review status */}
+                  {(() => {
+                    const rs = reviewStatuses[cand.pc_id] || cand.status || 'sourced';
+                    const rm = REVIEW_STATUSES[rs];
+                    return (
+                      <div className="mt-2 flex justify-center">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${rm.bg} ${rm.text} ${rm.border}`}>
+                          {rm.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </button>
             );
@@ -545,15 +588,15 @@ export default function CandidateMatchTab({ projectId }) {
       {/* ── C: Candidate Detail Panel ── */}
       <div className="relative">
         <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-violet-600 to-teal-500 opacity-35 blur-sm pointer-events-none" />
-        <div className="relative bg-slate-950/95 border border-white/8 rounded-2xl overflow-hidden">
+        <div className="relative bg-slate-950/95 border border-white/10 rounded-2xl overflow-hidden">
 
           {/* Panel header */}
           <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-slate-800/70">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h3 className="text-white font-bold text-lg">{candidate.name}</h3>
+                <h3 className="text-white font-bold text-xl">{candidate.name}</h3>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-violet-500/15 border-violet-500/40 text-violet-300">
-                  #{rank} · {strategicFit}% STRATEGIC FIT
+                  #{rank} · {strategicFit}% TALENTVAULT FIT SCORE
                 </span>
                 {blindSpotGaps.length > 0 && (
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full border bg-red-500/15 border-red-500/40 text-red-300">
@@ -573,6 +616,28 @@ export default function CandidateMatchTab({ projectId }) {
                 )}
               </div>
               <p className="text-slate-400 text-sm">{candidate.title}</p>
+            </div>
+            {/* Review status selector */}
+            <div className="flex flex-col items-end gap-1.5">
+              <span className="text-[10px] text-slate-600 uppercase tracking-widest font-semibold">Review Status</span>
+              <div className="flex items-center gap-1">
+                {Object.entries(REVIEW_STATUSES).map(([key, meta]) => {
+                  const isCurrent = (reviewStatuses[candidate.pc_id] || candidate.status || 'sourced') === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setReviewStatus(candidate.pc_id, key)}
+                      className={`text-[10px] font-bold px-2 py-1 rounded border uppercase tracking-wide transition-all ${
+                        isCurrent
+                          ? `${meta.bg} ${meta.text} ${meta.border} opacity-100`
+                          : 'bg-transparent border-slate-700/40 text-slate-600 hover:border-slate-600 hover:text-slate-400'
+                      }`}
+                    >
+                      {meta.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -612,7 +677,7 @@ export default function CandidateMatchTab({ projectId }) {
               <div key={label} className="px-5 py-3.5 text-center">
                 <div className={`text-2xl font-black ${color}`}>{val}</div>
                 <div className="text-xs font-semibold text-slate-300 mt-0.5">{label}</div>
-                <div className="text-[10px] text-slate-600 mt-0.5">{sub}</div>
+                <div className="text-xs text-slate-600 mt-0.5">{sub}</div>
               </div>
             ))}
           </div>
@@ -625,18 +690,18 @@ export default function CandidateMatchTab({ projectId }) {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="text-xs text-slate-400 uppercase tracking-widest font-bold">
-                    Strategic Gap Coverage
+                    Board Composition Gap Analysis (BoardReady Method)
                   </div>
                   <div className="text-[10px] text-slate-600 mt-0.5">
-                    Bars = candidate score · dim overlay = current board · sorted by strategic value
+                    Candidate score vs. current board coverage · sorted by strategic impact
                   </div>
                 </div>
-                <div className="flex flex-wrap justify-end gap-2 text-[9px]">
+                <div className="flex flex-wrap justify-end gap-2 text-[10px]">
                   {[
-                    { label: 'Blind Spot', color: 'bg-red-500/60' },
-                    { label: 'Unique',     color: 'bg-teal-500/60' },
-                    { label: 'Complements',color: 'bg-violet-500/60' },
-                    { label: 'Redundant',  color: 'bg-slate-600/60' },
+                    { label: 'Blind Spot',   color: 'bg-emerald-500/70' },
+                    { label: 'Unique',       color: 'bg-teal-500/70'    },
+                    { label: 'Incremental',  color: 'bg-amber-500/60'   },
+                    { label: 'Redundant',    color: 'bg-rose-500/50'    },
                   ].map(({ label, color }) => (
                     <span key={label} className="flex items-center gap-1 text-slate-600">
                       <span className={`w-2 h-1.5 rounded-sm ${color}`} />
@@ -651,8 +716,6 @@ export default function CandidateMatchTab({ projectId }) {
                     key={gap.gap_title}
                     gap={gap}
                     candidateScore={candidate.expertise[gap.gap_title] || 0}
-                    cand={candidate}
-                    allCands={candidates}
                   />
                 ))}
               </div>
@@ -664,7 +727,7 @@ export default function CandidateMatchTab({ projectId }) {
               {/* Why this score */}
               <div>
                 <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2">
-                  Why This Score?
+                  TalentVault Match Intelligence
                 </div>
                 {candidate.match_reasoning ? (
                   <p className="text-slate-300 text-sm leading-relaxed">{candidate.match_reasoning}</p>
@@ -680,64 +743,47 @@ export default function CandidateMatchTab({ projectId }) {
                 )}
               </div>
 
-              {/* Unique value */}
+              {/* ── Unique Value ── */}
               {uniqueGaps.length > 0 && (
                 <div>
                   <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-sm bg-teal-500/60 flex-shrink-0" />
-                    What Only {candidate.name.split(' ')[0]} Brings
+                    Unique Value — What Only {candidate.name.split(' ')[0]} Brings
                   </div>
                   <div className="space-y-1.5">
                     {uniqueGaps.map(g => (
-                      <div key={g.gap_title} className="flex items-start gap-2 text-xs">
-                        <span className="text-teal-500 mt-0.5 flex-shrink-0">·</span>
-                        <span className="text-slate-300">{sT(g.gap_title, 32)}
-                          <span className="text-teal-400 font-bold ml-1.5">{candidate.expertise[g.gap_title] || 0}%</span>
-                          <span className="text-slate-600 ml-1">— no other candidate matches</span>
-                        </span>
+                      <div key={g.gap_title} className="bg-teal-500/5 border border-teal-500/20 rounded-lg px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-teal-300 text-xs font-semibold">{sT(g.gap_title, 28)}</span>
+                          <span className="text-teal-400 text-xs font-black">{candidate.expertise[g.gap_title] || 0}%</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          Brings perspective NO current director has
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Blind spot coverage */}
+              {/* ── Blind Spots Filled ── */}
               {blindSpotGaps.length > 0 && (
                 <div>
                   <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-red-500/60 flex-shrink-0" />
-                    Critical Blind Spots Filled
+                    <span className="w-2 h-2 rounded-sm bg-emerald-500/60 flex-shrink-0" />
+                    Board Blind Spot{blindSpotGaps.length > 1 ? 's' : ''} Filled
                   </div>
                   <div className="space-y-1.5">
                     {blindSpotGaps.map(g => (
-                      <div key={g.gap_title} className="flex items-start gap-2 text-xs">
-                        <span className="text-red-500 mt-0.5 flex-shrink-0">·</span>
-                        <span className="text-slate-300">{sT(g.gap_title, 32)}
-                          <span className="text-red-400 font-bold ml-1.5">{candidate.expertise[g.gap_title] || 0}%</span>
-                          <span className="text-slate-600 ml-1">· board currently 0%</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Synergy potential */}
-              {pairings.length > 0 && (
-                <div>
-                  <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-indigo-500/60 flex-shrink-0" />
-                    Synergy Potential
-                  </div>
-                  <div className="space-y-2">
-                    {pairings.map(({ candidate: partner, addedCoverage, overlap }) => (
-                      <div key={partner.id} className="text-xs">
+                      <div key={g.gap_title} className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-300 font-medium">{sT(partner.name, 22)}</span>
-                          <span className="text-indigo-400 font-bold">+{addedCoverage} gaps</span>
+                          <span className="text-emerald-300 text-xs font-semibold">{sT(g.gap_title, 24)}</span>
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded border bg-emerald-500/15 border-emerald-500/30 text-emerald-300">
+                            0% → {candidate.expertise[g.gap_title] || 0}%
+                          </span>
                         </div>
-                        <div className="text-slate-600 mt-0.5">
-                          Combined: {filledGaps.length + addedCoverage} gaps · {overlap} overlap
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          Board lacks this entirely — creates new strategic capability
                         </div>
                       </div>
                     ))}
@@ -745,7 +791,66 @@ export default function CandidateMatchTab({ projectId }) {
                 </div>
               )}
 
-              {/* Redundancy warning */}
+              {/* ── Board Dynamics ── */}
+              {(() => {
+                const firstName        = candidate.name.split(' ')[0];
+                const candidateFills   = gaps.filter(g => (candidate.expertise[g.gap_title] || 0) >= 70);
+                const newCapabilities  = candidateFills.filter(g => g.current_coverage < 5);
+                const enablesNew       = candidateFills.filter(g =>
+                  g.current_coverage >= 5 && g.current_coverage < 30 &&
+                  (g.members_with || []).length === 0
+                );
+                const joinsDirectors   = candidateFills.filter(g =>
+                  (g.members_with || []).length > 0 && g.current_coverage < 70
+                );
+
+                if (!newCapabilities.length && !enablesNew.length && !joinsDirectors.length) return null;
+
+                return (
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-2.5 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-sm bg-indigo-500/60 flex-shrink-0" />
+                      Board Dynamics if Hired
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      {newCapabilities.map(g => (
+                        <div key={g.gap_title} className="flex items-start gap-2">
+                          <span className="text-emerald-400 font-black flex-shrink-0 mt-px">+</span>
+                          <span>
+                            <span className="text-emerald-300 font-semibold">Creates NEW capability</span>
+                            <span className="text-slate-400"> in {sT(g.gap_title, 26)}</span>
+                            <span className="text-slate-600"> — board has zero coverage today</span>
+                          </span>
+                        </div>
+                      ))}
+                      {enablesNew.map(g => (
+                        <div key={g.gap_title} className="flex items-start gap-2">
+                          <span className="text-teal-400 font-black flex-shrink-0 mt-px">+</span>
+                          <span>
+                            <span className="text-teal-300 font-semibold">Enables {sT(g.gap_title, 22)} discussions</span>
+                            <span className="text-slate-600"> no current director can lead</span>
+                          </span>
+                        </div>
+                      ))}
+                      {joinsDirectors.slice(0, 2).map(g => {
+                        const dirs = (g.members_with || []).slice(0, 2);
+                        return (
+                          <div key={g.gap_title} className="flex items-start gap-2">
+                            <span className="text-indigo-400 font-black flex-shrink-0 mt-px">↔</span>
+                            <span>
+                              <span className="text-slate-300">Joins </span>
+                              <span className="text-indigo-300 font-semibold">{dirs.join(' & ')}</span>
+                              <span className="text-slate-400"> for {sT(g.gap_title, 22)} strategy</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* ── Redundancy Warning ── */}
               {isRedundancyWarning && (
                 <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-1.5">
@@ -753,18 +858,23 @@ export default function CandidateMatchTab({ projectId }) {
                     <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Redundancy Warning</span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    {Math.round(redundancyRate * 100)}% of this candidate's expertise overlaps with existing directors.
-                    Consider whether this adds genuine new perspective or duplicates current board capability.
+                    {Math.round(redundancyRate * 100)}% of this candidate's strengths overlap with existing directors.
+                    High score but low incremental board value — consider candidates who fill different gaps.
                   </p>
                   {redundantGaps.slice(0, 2).map(g => (
-                    <div key={g.gap_title} className="text-[10px] text-amber-600 mt-1">
-                      · {sT(g.gap_title, 36)} — already {Math.round(g.current_coverage)}% covered
+                    <div key={g.gap_title} className="text-[10px] text-amber-600/80 mt-1 flex items-center gap-1.5">
+                      <span>·</span>
+                      <span>{sT(g.gap_title, 30)}</span>
+                      <span className="text-amber-800">— board already {Math.round(g.current_coverage)}% covered</span>
+                      {(g.members_with || []).length > 0 && (
+                        <span className="text-amber-800">by {g.members_with.slice(0, 1).join(', ')}</span>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              {uniqueGaps.length === 0 && blindSpotGaps.length === 0 && !isRedundancyWarning && pairings.length === 0 && (
+              {uniqueGaps.length === 0 && blindSpotGaps.length === 0 && !isRedundancyWarning && (
                 <div className="text-slate-600 text-xs">Run a pgvector sync to generate strategic analysis.</div>
               )}
             </div>
@@ -782,7 +892,7 @@ export default function CandidateMatchTab({ projectId }) {
                 Strategic impact on board capability · blind spots and unique additions prioritised
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end text-[10px] text-slate-600">
+            <div className="flex items-center gap-2 flex-wrap justify-end text-xs text-slate-600">
               {[
                 { label: 'Creates NEW Capability', badge: 'bg-red-500/15 border-red-500/30 text-red-300' },
                 { label: 'Only Candidate',          badge: 'bg-teal-500/15 border-teal-500/30 text-teal-300' },
@@ -808,7 +918,7 @@ export default function CandidateMatchTab({ projectId }) {
                     </span>
                   </div>
                   <div className="mt-0.5 flex justify-end">
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${g.impactBadge}`}>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${g.impactBadge}`}>
                       {g.impactLabel}
                     </span>
                   </div>
@@ -820,13 +930,13 @@ export default function CandidateMatchTab({ projectId }) {
                   <div className="h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
                     <div className="h-full rounded-full bg-slate-600" style={{ width: `${g.before}%` }} />
                   </div>
-                  <div className="text-[9px] text-slate-600 uppercase tracking-wide mt-0.5">Current</div>
+                  <div className="text-[10px] text-slate-600 uppercase tracking-wide mt-0.5">Current</div>
                 </div>
 
                 {/* Arrow + delta */}
                 <div className="flex flex-col items-center gap-0.5">
                   <ArrowRight className="w-4 h-4 text-teal-600" />
-                  <span className="text-[9px] font-bold text-teal-400">+{g.improvement}%</span>
+                  <span className="text-[10px] font-bold text-teal-400">+{g.improvement}%</span>
                 </div>
 
                 {/* After */}
@@ -839,23 +949,23 @@ export default function CandidateMatchTab({ projectId }) {
                       style={{ width: `${g.after}%`, backgroundColor: g.after >= 70 ? '#14b8a6' : g.after >= 50 ? '#f59e0b' : '#f43f5e' }}
                     />
                   </div>
-                  <div className="text-[9px] text-slate-600 uppercase tracking-wide mt-0.5">If Hired</div>
+                  <div className="text-[10px] text-slate-600 uppercase tracking-wide mt-0.5">If Hired</div>
                 </div>
 
                 {/* Outcome badge */}
                 <div className="flex-shrink-0">
                   {g.after >= 70 && g.before < 70 && (
-                    <span className="text-[9px] font-bold px-2 py-1 rounded border bg-teal-500/15 border-teal-500/30 text-teal-300 uppercase whitespace-nowrap block">
+                    <span className="text-[10px] font-bold px-2 py-1 rounded border bg-teal-500/15 border-teal-500/30 text-teal-300 uppercase whitespace-nowrap block">
                       Threshold Met
                     </span>
                   )}
                   {g.isBlind && g.after >= 70 && (
-                    <span className="text-[9px] font-bold px-2 py-1 rounded border bg-red-500/15 border-red-500/30 text-red-300 uppercase whitespace-nowrap block mt-0.5">
+                    <span className="text-[10px] font-bold px-2 py-1 rounded border bg-red-500/15 border-red-500/30 text-red-300 uppercase whitespace-nowrap block mt-0.5">
                       0% → Capable
                     </span>
                   )}
                   {g.after < 70 && g.improvement > 5 && (
-                    <span className="text-[9px] font-bold px-2 py-1 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400 uppercase whitespace-nowrap block">
+                    <span className="text-[10px] font-bold px-2 py-1 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400 uppercase whitespace-nowrap block">
                       Improved
                     </span>
                   )}

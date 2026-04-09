@@ -8,6 +8,8 @@ import AISearch from './pages/AISearch';
 import ImportExport from './pages/ImportExport';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import SecTracker from './pages/SecTracker';
+import PrivateBoards from './pages/PrivateBoards';
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="/import-export" element={<ImportExport />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/sec-tracker" element={<SecTracker />} />
+        <Route path="/private-boards" element={<PrivateBoards />} />
       </Routes>
     </Router>
   );

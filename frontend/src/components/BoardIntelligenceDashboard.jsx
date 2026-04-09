@@ -72,18 +72,18 @@ const BoardIntelligenceDashboard = ({ projectId }) => {
 
   return (
     <div className="space-y-6 p-6">
-      {/* KPI Cards */}
+      {/* BRI KPI Cards */}
       <Grid numItemsSm={2} numItemsLg={4} className="gap-6">
         <Card decoration="top" decorationColor="blue">
-          <Text>Gender Diversity</Text>
+          <Text>BRI: Gender Component</Text>
           <Metric>{metrics.female_percentage}%</Metric>
-          <Text className="text-sm text-gray-500">vs S&P 500: 32%</Text>
+          <Text className="text-sm text-gray-500">S&P 500 benchmark: 32%</Text>
         </Card>
 
         <Card decoration="top" decorationColor="violet">
-          <Text>Racial Diversity</Text>
+          <Text>BRI: Race/Ethnicity Component</Text>
           <Metric>{metrics.diverse_percentage}%</Metric>
-          <Text className="text-sm text-gray-500">vs S&P 500: 28%</Text>
+          <Text className="text-sm text-gray-500">S&P 500 benchmark: 28%</Text>
         </Card>
 
         <Card decoration="top" decorationColor="amber">
@@ -93,16 +93,16 @@ const BoardIntelligenceDashboard = ({ projectId }) => {
         </Card>
 
         <Card decoration="top" decorationColor="emerald">
-          <Text>Total Board Size</Text>
+          <Text>Board Size</Text>
           <Metric>{metrics.total_members}</Metric>
           <Text className="text-sm text-gray-500">{metrics.total_gaps} categories analyzed</Text>
         </Card>
       </Grid>
 
-      {/* AI-Generated Gap Analysis */}
+      {/* Board Composition Gap Analysis */}
       <Card>
-        <Title>🤖 AI-Generated Gap Analysis</Title>
-        <Text className="mb-4">Claude analyzed your company and identified these specific board expertise gaps</Text>
+        <Title>Board Composition Gap Analysis (BoardReady Method)</Title>
+        <Text className="mb-4">AI-powered gap analysis using BoardReady's methodology — identifying expertise blind spots and diversity opportunities</Text>
         
         <div className="space-y-4">
           {gaps.map((gap, idx) => (
@@ -154,7 +154,7 @@ const BoardIntelligenceDashboard = ({ projectId }) => {
       <Grid numItemsLg={2} className="gap-6">
         {/* LARGER Radar Chart with Better Labels */}
         <Card>
-          <Title>Board Coverage vs Target</Title>
+          <Title>BRI Diversity Components — Coverage vs Target</Title>
           <Text className="mb-4">Hover to see full category names</Text>
           <ResponsiveContainer width="100%" height={550}>
             <RadarChart data={radarData}>
@@ -209,7 +209,7 @@ const BoardIntelligenceDashboard = ({ projectId }) => {
 
         {/* Fixed Donut Chart - Explicit Color Mapping */}
         <Card>
-          <Title>Gap Priority Distribution</Title>
+          <Title>BoardReady Index — Gap Priority Distribution</Title>
           <Text className="mb-4">Total: {gaps.length} categories analyzed</Text>
           
           <div className="h-80 flex flex-col justify-center">
